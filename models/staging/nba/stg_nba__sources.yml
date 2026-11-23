@@ -1,0 +1,89 @@
+sources:
+  - name: nba
+    description: >
+      Dataset NBA de Kaggle (wyattowalsh/basketball), cargado a mano en Bronze
+      con COPY INTO (setup/Cargar_bronze.sql). Todas las columnas son VARCHAR.
+    database: "{{ env_var('DBT_BRONZE_DB') }}"
+    schema: nba
+
+    tables:
+      - name: game
+        description: Un partido por fila, con estadísticas del local (_home) y del visitante (_away).
+        columns:
+          - name: game_id
+            data_tests:
+              - not_null
+              # En origen hay 56 game_id repetidos (All-Star duplicados).
+              # Aviso, no error: se deduplica en Silver.
+              - unique:
+                  config:
+                    severity: warn
+          - name: season_type
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    # 'All Star' y 'All-Star' son el mismo valor mal escrito: se normaliza en Silver
+                    values: ['Regular Season', 'Playoffs', 'Pre Season', 'All Star', 'All-Star']
+
+      - name: line_score
+        description: Puntos por cuarto y prórroga. Sirve para reconstruir los minutos cuando min = 0.
+        columns:
+          - name: game_id
+            data_tests:
+              - not_null
+
+      - name: game_info
+        description: Asistencia y duración de cada partido.
+        columns:
+          - name: game_id
+            data_tests:
+              - not_null
+
+      - name: team
+        description: Los 30 equipos actuales de la NBA.
+        columns:
+          - name: id
+            data_tests:
+              - unique
+              - not_null
+
+      - name: team_details
+        description: Pabellón, aforo y propietarios. En origen faltan 5 equipos.
+        columns:
+          - name: team_id
+            data_tests:
+              - unique
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('nba', 'team')
+                    field: id
+
+      - name: team_history
+        description: Ciudades y nombres históricos de cada franquicia.
+        columns:
+          - name: team_id
+            data_tests:
+              - not_null
+              - relationships:
+                  arguments:
+                    to: source('nba', 'team')
+                    field: id
+
+      - name: inactive_players
+        description: Jugadores inactivos (de baja) en cada partido.
+        columns:
+          - name: game_id
+            data_tests:
+              - not_null
+          - name: player_id
+            data_tests:
+              - not_null
+
+      - name: common_player_info
+        description: Ficha de cada jugador.
+        columns:
+          - name: person_id
+            data_tests:
+              - unique
+              - not_null
