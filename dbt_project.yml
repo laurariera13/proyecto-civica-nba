@@ -1,4 +1,4 @@
-name: nba_viajes
+name: proyecto-civica-nba
 version: '1.0.0'
 profile: default
 
@@ -29,7 +29,7 @@ models:
     staging:                      # stg_: casteo y renombrado, 1:1 con Bronze
       +materialized: view
       +database: "{{ env_var('DBT_SILVER_DB') }}"
-      +schema: staging
+      +schema: kaggle
       +tags: ['staging']
 
     silver:                       # slv_: limpieza, corrección y deduplicación
