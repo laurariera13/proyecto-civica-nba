@@ -23,13 +23,13 @@ vars:
 # Modelos: configuración por carpeta (capa). Se hereda hacia abajo.
 # -----------------------------------------------------------------------------
 models:
-  nba_viajes:
+  proyecto-civica-nba:
     +transient: false
 
     staging:                      # stg_: casteo y renombrado, 1:1 con Bronze
       +materialized: view
       +database: "{{ env_var('DBT_SILVER_DB') }}"
-      +schema: kaggle
+      +schema: staging
       +tags: ['staging']
 
     silver:                       # slv_: limpieza, corrección y deduplicación
