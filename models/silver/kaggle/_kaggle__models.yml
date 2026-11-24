@@ -1,0 +1,389 @@
+# =============================================================================
+# _kaggle__models.yml · Modelos Silver de la fuente kaggle
+# =============================================================================
+# Silver está en 3FN: cada tabla tiene su clave y cada columna depende solo
+# de ella. Aquí se comprueba justo eso:
+#   - Clave primaria: unique + not_null (o unique_combination_of_columns si
+#     la clave es de varias columnas).
+#   - Claves foráneas: relationships (ningún id apunta a una fila que no existe).
+#   - Valores correctos: accepted_values y dbt_utils.accepted_range.
+# Al final, unit tests: comprueban la lógica con datos inventados.
+# =============================================================================
+
+models:
+  # ---------------------------------------------------------------------------
+  # Temporadas, ciudades y equipos
+  # ---------------------------------------------------------------------------
+  - name: slv_kaggle__seasons
+    description: Una fila por temporada y tipo. El tipo sale del primer dígito de season_id.
+    columns:
+      - name: season_id
+        description: Código de temporada. Primer dígito = tipo, resto = año (22022 = Regular Season 2022-23).
+        data_tests: [unique, not_null]
+      - name: season_year
+        description: Año en que empieza la temporada.
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1946
+                max_value: 2030
+      - name: season_type
+        description: '{{ doc("season_type") }}'
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Pre Season', 'Regular Season', 'All Star', 'Playoffs']
+
+  - name: slv_kaggle__cities
+    description: Una fila por ciudad con su estado. El estado depende de la ciudad, no del equipo.
+    columns:
+      - name: city_id
+        description: Clave sustituta (hash de city_name).
+        data_tests: [unique, not_null]
+      - name: city_name
+        description: Ciudad o región tal como la usa la NBA (p. ej. Golden State, Utah).
+        data_tests: [unique, not_null]
+      - name: state_name
+        description: Estado o provincia. Null en ciudades históricas sin dato.
+      - name: is_state_corrected
+        description: True si el estado venía mal en origen (Atlanta -> Georgia).
+        data_tests: [not_null]
+
+  - name: slv_kaggle__teams
+    description: >
+      Una fila por equipo con lo que no cambia con el tiempo. Ciudad y apodo
+      están en team_history. Incluye equipos que solo aparecen en partidos.
+    columns:
+      - name: team_id
+        description: Id del equipo.
+        data_tests: [unique, not_null]
+      - name: team_abbreviation
+        description: Abreviatura actual (o la última usada, si es inferido).
+        data_tests: [not_null]
+      - name: year_founded
+        description: Año de fundación. Null en equipos inferidos.
+      - name: is_inferred
+        description: '{{ doc("is_inferred") }}'
+        data_tests: [not_null]
+
+  - name: slv_kaggle__team_history
+    description: Nombres de cada equipo a lo largo del tiempo. Una fila por equipo y nombre.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['team_id', 'year_from']
+    columns:
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__teams')
+                field: team_id
+      - name: year_from
+        description: Primer año con este nombre.
+        data_tests: [not_null]
+      - name: year_to
+        description: Último año con este nombre. Null = nombre actual.
+      - name: city_id
+        description: Ciudad. Null en equipos inferidos (el nombre no se puede separar).
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__cities')
+                field: city_id
+      - name: team_nickname
+        description: Apodo (Lakers). En equipos inferidos, el nombre completo tal como viene.
+        data_tests: [not_null]
+      - name: is_inferred
+        description: '{{ doc("is_inferred") }}'
+        data_tests: [not_null]
+
+  - name: slv_kaggle__arenas
+    description: Una fila por pabellón. El aforo es del pabellón, no del equipo.
+    columns:
+      - name: arena_id
+        description: Clave sustituta (hash de arena_name).
+        data_tests: [unique, not_null]
+      - name: arena_name
+        data_tests: [unique, not_null]
+      - name: arena_capacity
+        description: Aforo. Null en 9 pabellones (no viene en origen).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+
+  - name: slv_kaggle__team_details
+    description: Ficha extra del equipo (pabellón, dueño, director general, entrenador). Solo 25 equipos en origen.
+    columns:
+      - name: team_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__teams')
+                field: team_id
+      - name: arena_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__arenas')
+                field: arena_id
+
+  # ---------------------------------------------------------------------------
+  # Jugadores
+  # ---------------------------------------------------------------------------
+  - name: slv_kaggle__players
+    description: >
+      Una fila por jugador. Unidades en sistema métrico. Incluye los jugadores
+      que solo aparecen en inactive_players.
+    columns:
+      - name: player_id
+        data_tests: [unique, not_null]
+      - name: birth_date
+        description: Fecha de nacimiento. Null si en origen era el relleno 1900-01-01.
+      - name: height_cm
+        description: Altura en cm (convertida desde pies-pulgadas).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 150
+                max_value: 240
+      - name: weight_kg
+        description: Peso en kg (convertido desde libras).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 50
+                max_value: 200
+      - name: team_id
+        description: Equipo actual. Null si no tiene equipo.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__teams')
+                field: team_id
+      - name: is_undrafted
+        description: True si no fue elegido en el draft.
+      - name: is_birth_date_invalid
+        description: True si la fecha de nacimiento era un relleno.
+        data_tests: [not_null]
+      - name: is_inferred
+        description: '{{ doc("is_inferred") }}'
+        data_tests: [not_null]
+
+  # ---------------------------------------------------------------------------
+  # Partidos
+  # ---------------------------------------------------------------------------
+  - name: slv_kaggle__games
+    description: Una fila por partido con lo que es del partido. Lo de cada equipo está en team_games. Incremental.
+    columns:
+      - name: game_id
+        description: Id del partido. Texto, para conservar los ceros a la izquierda.
+        data_tests: [unique, not_null]
+      - name: season_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__seasons')
+                field: season_id
+      - name: game_date
+        data_tests: [not_null]
+      - name: game_minutes
+        description: Minutos jugados. Reconstruidos (240 + 25 por prórroga) si venían a 0; null si no se pudo.
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                inclusive: false
+      - name: is_minutes_reconstructed
+        data_tests: [not_null]
+
+  - name: slv_kaggle__team_games
+    description: Lo que hizo cada equipo en cada partido. Dos filas por partido. Incremental.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['game_id', 'team_id']
+    columns:
+      - name: game_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__games')
+                field: game_id
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__teams')
+                field: team_id
+      - name: is_home
+        description: True si jugaba en casa.
+        data_tests: [not_null]
+      - name: wl
+        description: Resultado (W/L), recalculado desde los puntos.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['W', 'L']
+      - name: is_wl_corrected
+        description: True si el W/L de origen venía mal o vacío.
+        data_tests: [not_null]
+      - name: pts
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+
+  - name: slv_kaggle__period_scores
+    description: Puntos de cada equipo en cada periodo. Sustituye a line_scores. Incremental.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['game_id', 'team_id', 'period_number']
+    columns:
+      - name: game_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__games')
+                field: game_id
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__teams')
+                field: team_id
+      - name: period_number
+        description: '{{ doc("period_number") }}'
+        data_tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 14
+      - name: points
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+
+  - name: slv_kaggle__game_info
+    description: Asistencia y duración, una fila por partido. Incremental.
+    columns:
+      - name: game_id
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__games')
+                field: game_id
+      - name: attendance
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: game_duration_minutes
+        description: Duración en minutos. Null si venía fuera de 60-240 (error de origen).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 60
+                max_value: 240
+      - name: is_duration_invalid
+        data_tests: [not_null]
+
+  - name: slv_kaggle__inactive_players
+    description: Jugadores de baja en cada partido. Una fila por partido y jugador. Incremental.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['game_id', 'player_id']
+    columns:
+      - name: game_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__games')
+                field: game_id
+      - name: player_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__players')
+                field: player_id
+      - name: team_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('slv_kaggle__teams')
+                field: team_id
+
+# =============================================================================
+# Unit tests
+# =============================================================================
+# Comprueban la LÓGICA de un modelo con datos inventados, sin depender de lo
+# que haya en Snowflake. En los incrementales se fuerza is_incremental = false
+# para probar la carga completa.
+#   dbt test --select "slv_kaggle__team_games,test_type:unit"
+# =============================================================================
+unit_tests:
+  - name: test_slv_team_games_separa_equipos_y_recalcula_wl
+    model: slv_kaggle__team_games
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('stg_kaggle__games')
+        rows:
+          # El local gana 100-90 pero en origen pone L: debe salir W y corregido
+          - {game_id: '001', team_id_home: 1, team_id_away: 2, pts_home: 100, pts_away: 90, wl_home: 'L', wl_away: 'W', loaded_at: '2024-01-01 00:00:00'}
+    expect:
+      rows:
+        - {game_id: '001', team_id: 1, is_home: true,  wl: 'W', is_wl_corrected: true,  pts: 100}
+        - {game_id: '001', team_id: 2, is_home: false, wl: 'L', is_wl_corrected: true,  pts: 90}
+
+  - name: test_slv_period_scores_quita_prorrogas_no_jugadas
+    model: slv_kaggle__period_scores
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('stg_kaggle__line_scores')
+        rows:
+          # 1 prórroga jugada (5-3) y la 2ª a 0-0: la 2ª no debe aparecer
+          - {game_id: '001', team_id_home: 1, team_id_away: 2,
+             pts_qtr1_home: 30, pts_qtr2_home: 25, pts_qtr3_home: 20, pts_qtr4_home: 25,
+             pts_qtr1_away: 28, pts_qtr2_away: 22, pts_qtr3_away: 25, pts_qtr4_away: 25,
+             pts_ot1_home: 5, pts_ot1_away: 3, pts_ot2_home: 0, pts_ot2_away: 0,
+             loaded_at: '2024-01-01 00:00:00'}
+    expect:
+      rows:
+        - {game_id: '001', team_id: 1, period_number: 1, points: 30}
+        - {game_id: '001', team_id: 1, period_number: 2, points: 25}
+        - {game_id: '001', team_id: 1, period_number: 3, points: 20}
+        - {game_id: '001', team_id: 1, period_number: 4, points: 25}
+        - {game_id: '001', team_id: 1, period_number: 5, points: 5}
+        - {game_id: '001', team_id: 2, period_number: 1, points: 28}
+        - {game_id: '001', team_id: 2, period_number: 2, points: 22}
+        - {game_id: '001', team_id: 2, period_number: 3, points: 25}
+        - {game_id: '001', team_id: 2, period_number: 4, points: 25}
+        - {game_id: '001', team_id: 2, period_number: 5, points: 3}
