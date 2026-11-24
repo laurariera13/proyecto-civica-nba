@@ -1,0 +1,33 @@
+models:
+  - name: agg_team_performance
+    description: Caso 2. Informe de rendimiento de cada equipo por temporada (balance, casa/fuera, ataque, defensa y tiro).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['team_id', 'season_id']
+    columns:
+      - name: win_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+      - name: home_win_pct
+        description: '% de victorias en casa. Bajó en 2020-21, la temporada casi sin público.'
+      - name: back_to_back_win_pct
+        description: '% de victorias en back-to-back (enlaza con el caso 1).'
+
+exposures:
+  - name: dashboard_team_performance
+    label: Dashboard NBA · informe de rendimiento por equipo
+    type: dashboard
+    maturity: medium
+    description: Página de Power BI del caso 2.
+    owner:
+      name: Laura Riera
+    depends_on:
+      - ref('agg_team_performance')
+      - ref('fct_team_games')
+      - ref('dim_teams')
+      - ref('dim_seasons')
+      - ref('dim_dates')

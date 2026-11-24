@@ -1,0 +1,39 @@
+models:
+  - name: agg_travel_impact
+    description: Caso 1. % de victorias y diferencia de puntos por tramo de cada factor de viaje.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['factor', 'location', 'bucket']
+    columns:
+      - name: factor
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Descanso', 'Distancia', 'Cambio de huso', 'Gira fuera de casa']
+      - name: bucket
+        description: Tramo, numerado para que Power BI lo ordene bien.
+        data_tests: [not_null]
+      - name: win_pct
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 100
+
+exposures:
+  - name: dashboard_travel
+    label: Dashboard NBA · impacto de los viajes
+    type: dashboard
+    maturity: medium
+    description: Página de Power BI del caso 1.
+    owner:
+      name: Laura Riera
+    depends_on:
+      - ref('agg_travel_impact')
+      - ref('fct_team_games')
+      - ref('dim_teams')
+      - ref('dim_arenas')
+      - ref('dim_seasons')
+      - ref('dim_dates')
