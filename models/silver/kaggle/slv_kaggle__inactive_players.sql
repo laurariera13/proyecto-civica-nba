@@ -14,10 +14,10 @@
 --   - Incremental por loaded_at + merge por la clave compuesta
 --     (game_id, player_id): un jugador solo puede estar de baja una vez en
 --     cada partido.
---   - Deduplicación: en origen hay 7 parejas (partido, jugador) repetidas,
---     filas idénticas. Se queda una.
---   - Dorsal: 43 filas lo traen vacío; el texto vacío ('') pasa a null,
---     que es como se representa "no hay dato".
+--   - Deduplicación: 7 parejas (partido, jugador) repetidas en origen.
+--   - Dorsal vacío ('') -> null.
+--   - 3FN: se quitan nombre, apellido (están en players) y abreviatura del
+--     equipo (está en teams). Solo quedan los ids que enlazan.
 -- =============================================================================
 
 with inactive_players as (
@@ -34,19 +34,12 @@ deduplicated as (
         partition by game_id, player_id
         order by loaded_at desc
     ) = 1
-),
-
-corrected as (
-    select
-          game_id
-        , player_id
-        , first_name
-        , last_name
-        , nullif(jersey_number, '')     as jersey_number
-        , team_id
-        , team_abbreviation
-        , loaded_at
-    from deduplicated
 )
 
-select * from corrected
+select
+      game_id
+    , player_id
+    , team_id
+    , nullif(jersey_number, '')     as jersey_number
+    , loaded_at
+from deduplicated
