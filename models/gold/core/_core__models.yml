@@ -80,3 +80,74 @@ models:
         data_type: varchar
       - name: is_weekend
         data_type: boolean
+
+  - name: fct_team_games
+    description: Hechos. 1 fila por equipo y partido de temporada regular en alcance. Incremental.
+    config:
+      contract:
+        enforced: true
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['game_id', 'team_id']
+    columns:
+      - name: game_id
+        data_type: varchar
+        constraints: [{type: not_null}]
+      - name: team_id
+        data_type: integer
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_teams'), field: team_id}}
+      - name: opponent_team_id
+        data_type: integer
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_teams'), field: team_id}}
+      - name: season_id
+        data_type: varchar
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_seasons'), field: season_id}}
+      - name: arena_id
+        data_type: varchar
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_arenas'), field: arena_id}}
+      - name: game_date
+        data_type: date
+        constraints: [{type: not_null}]
+        data_tests:
+          - relationships: {arguments: {to: ref('dim_dates'), field: date_day}}
+      - {name: is_home, data_type: boolean}
+      - {name: is_win, data_type: boolean}
+      - {name: pts, data_type: integer}
+      - {name: opponent_pts, data_type: integer}
+      - {name: point_diff, data_type: integer}
+      - {name: fgm, data_type: integer}
+      - {name: fga, data_type: integer}
+      - {name: fg3m, data_type: integer}
+      - {name: fg3a, data_type: integer}
+      - {name: ftm, data_type: integer}
+      - {name: fta, data_type: integer}
+      - {name: reb, data_type: integer}
+      - {name: ast, data_type: integer}
+      - {name: tov, data_type: integer}
+      - {name: distance_km, data_type: 'number(10, 1)'}
+      - {name: days_rest, data_type: integer}
+      - {name: is_back_to_back, data_type: boolean}
+      - {name: timezone_shift_hours, data_type: integer}
+      - name: travel_direction
+        data_type: varchar
+        data_tests:
+          - accepted_values: {arguments: {values: ['east', 'west', 'none']}}
+      - {name: road_trip_game_number, data_type: integer}
+      - {name: is_from_home_base, data_type: boolean}
+      - {name: is_neutral_venue, data_type: boolean}
+      - name: fan_context
+        data_type: varchar
+        data_tests:
+          - accepted_values: {arguments: {values: ['normal', 'restricted', 'bubble']}}
+      - {name: attendance, data_type: integer}
+      - {name: n_inactive_players, data_type: integer}
+      - {name: loaded_at, data_type: timestamp_ltz}

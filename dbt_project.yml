@@ -19,6 +19,7 @@ vars:
   season_end: 2022          # última temporada (2022-23)
   long_trip_km: 1500        # a partir de aquí un viaje se considera largo
   return_home_min_days: 5   # más de estos días entre partidos = el equipo vuelve a casa
+  restricted_fans_season: 2020  # temporada 2020-21: público restringido (COVID)
 
 # -----------------------------------------------------------------------------
 # Modelos: configuración por carpeta (capa). Se hereda hacia abajo.
@@ -58,7 +59,7 @@ models:
         +schema: travel
         +group: travel
         +access: public
-      home_advantage:             # caso 2: ventaja de casa y público
+      team_performance:             # caso 2: ventaja de casa y público
         +schema: team_performance
         +group: team_performance
         +access: public
