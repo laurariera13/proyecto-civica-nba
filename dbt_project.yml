@@ -1,4 +1,4 @@
-name: nba_viajes
+name: proyecto-civica-nba
 version: '1.0.0'
 profile: default
 
@@ -23,14 +23,15 @@ vars:
 # Modelos: configuración por carpeta (capa). Se hereda hacia abajo.
 # -----------------------------------------------------------------------------
 models:
-  nba_viajes:
+  proyecto-civica-nba:
     +transient: false
 
-    staging:                      # stg_: casteo y renombrado, 1:1 con Bronze
+    staging:
       +materialized: view
       +database: "{{ env_var('DBT_SILVER_DB') }}"
-      +schema: staging
       +tags: ['staging']
+      kaggle:                 # una subcarpeta (y un schema) por fuente
+        +schema: kaggle
 
     silver:                       # slv_: limpieza, corrección y deduplicación
       +materialized: table
@@ -54,6 +55,6 @@ models:
 # Seeds: datos de referencia que creamos nosotras (pabellones, sedes neutrales)
 # -----------------------------------------------------------------------------
 seeds:
-  nba_viajes:
+  proyecto-civica-nba:
     +database: "{{ env_var('DBT_SILVER_DB') }}"
     +schema: seeds

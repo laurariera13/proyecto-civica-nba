@@ -1,5 +1,6 @@
+{{ config(materialized='view') }}
 with source as (
-    select * from {{ source('nba', 'team_history') }}
+    select * from {{ source('kaggle', 'team_history') }}
 ),
 
 renamed as (
