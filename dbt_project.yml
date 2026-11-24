@@ -36,8 +36,9 @@ models:
     silver:                       # slv_: limpieza, corrección y deduplicación
       +materialized: table
       +database: "{{ env_var('DBT_SILVER_DB') }}"
-      +schema: silver
       +tags: ['silver']
+      kaggle:
+        +schema: kaggle
 
     gold:                         # consumo (Power BI)
       +materialized: table
