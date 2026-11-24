@@ -11,7 +11,7 @@
 {% set stats_porcentaje = ['fg_pct', 'fg3_pct', 'ft_pct'] %}
 
 with source as (
-    select * from {{ source('nba', 'game') }}
+    select * from {{ source('kaggle', 'game') }}
 ),
 
 renamed as (

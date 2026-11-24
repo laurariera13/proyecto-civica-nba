@@ -1,5 +1,5 @@
 with source as (
-    select * from {{ source('nba', 'inactive_players') }}
+    select * from {{ source('kaggle', 'inactive_players') }}
 ),
 
 renamed as (

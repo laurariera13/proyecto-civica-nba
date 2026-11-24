@@ -1,10 +1,10 @@
 sources:
-  - name: nba
+  - name: kaggle
     description: >
       Dataset NBA de Kaggle (wyattowalsh/basketball), cargado a mano en Bronze
       con COPY INTO (setup/Cargar_bronze.sql). Todas las columnas son VARCHAR.
     database: "{{ env_var('DBT_BRONZE_DB') }}"
-    schema: nba
+    schema: kaggle
 
     tables:
       - name: game

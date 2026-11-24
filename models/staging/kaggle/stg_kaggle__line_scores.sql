@@ -1,7 +1,7 @@
 {% set cuartos = ['qtr1', 'qtr2', 'qtr3', 'qtr4'] %}
 
 with source as (
-    select * from {{ source('nba', 'line_score') }}
+    select * from {{ source('kaggle', 'line_score') }}
 ),
 
 renamed as (
