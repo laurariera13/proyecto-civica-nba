@@ -10,6 +10,7 @@
                          'reb', 'ast', 'stl', 'blk', 'tov', 'pf', 'pts', 'plus_minus'] %}
 {% set stats_porcentaje = ['fg_pct', 'fg3_pct', 'ft_pct'] %}
 
+{{ config(materialized='view') }}
 with source as (
     select * from {{ source('kaggle', 'game') }}
 ),
