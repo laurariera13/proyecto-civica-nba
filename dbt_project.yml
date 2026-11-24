@@ -18,6 +18,7 @@ vars:
   season_start: 2013        # primera temporada del análisis (2013-14)
   season_end: 2022          # última temporada (2022-23)
   long_trip_km: 1500        # a partir de aquí un viaje se considera largo
+  return_home_min_days: 5   # más de estos días entre partidos = el equipo vuelve a casa
 
 # -----------------------------------------------------------------------------
 # Modelos: configuración por carpeta (capa). Se hereda hacia abajo.
@@ -49,18 +50,18 @@ models:
         +schema: intermediate
         +group: core
         +access: private          # solo la usan los modelos de su group
-    core:                       # dim_ y fct_
-      +schema: core
-      +group: core
-      +access: public           # cualquiera puede usarlos
-    travel:                     # caso 1: impacto de los viajes
-      +schema: travel
-      +group: travel
-      +access: public
-    home_advantage:             # caso 2: ventaja de casa y público
-      +schema: team_performance
-      +group: team_performance
-      +access: public
+      core:                       # dim_ y fct_
+        +schema: core
+        +group: core
+        +access: public           # cualquiera puede usarlos
+      travel:                     # caso 1: impacto de los viajes
+        +schema: travel
+        +group: travel
+        +access: public
+      home_advantage:             # caso 2: ventaja de casa y público
+        +schema: team_performance
+        +group: team_performance
+        +access: public
 
 # -----------------------------------------------------------------------------
 # Seeds: datos de referencia que creamos nosotras (pabellones, sedes neutrales)
@@ -69,23 +70,15 @@ seeds:
   proyecto-civica-nba:
     +database: "{{ env_var('DBT_SILVER_DB') }}"
     +schema: seeds
-    arena_locations:
+    nba_arenas:
       +column_types:
+        team_id: integer
+        team_abbreviation: varchar(3)
         arena_name: varchar(100)
         latitude: number(9, 6)
         longitude: number(9, 6)
         timezone: varchar(50)
-    team_home_arenas:
-      +column_types:
-        team_id: integer
-        arena_name: varchar(100)
-        season_from: integer
-        season_to: integer
-    neutral_venue_periods:
-      +column_types:
-        arena_name: varchar(100)
         date_from: date
         date_to: date
-        description: varchar(200)
 
   
