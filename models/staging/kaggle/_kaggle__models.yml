@@ -1,0 +1,158 @@
+# =============================================================================
+# _kaggle__models.yml · Modelos de staging de la fuente kaggle
+# =============================================================================
+# Describe cada vista stg_ y sus columnas clave, y comprueba que el casteo ha
+# ido bien. La unicidad de los partidos NO se exige aquí: staging no
+# deduplica (eso es Silver), así que donde sabemos que hay duplicados el test
+# es un aviso (warn) y no un error.
+# =============================================================================
+
+models:
+  - name: stg_kaggle__games
+    description: >
+      Partidos (1 fila por partido, local y visitante en columnas _home/_away).
+      Casteado y renombrado desde Bronze; sin corregir ni deduplicar.
+    columns:
+      - name: game_id
+        description: Id del partido. Texto, para conservar los ceros a la izquierda.
+        data_tests:
+          - not_null
+      - name: game_date
+        description: Fecha del partido.
+        data_tests:
+          - not_null
+      - name: season_type
+        description: Tipo de partido. "All Star" y "All-Star" se normalizan en Silver.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Regular Season', 'Playoffs', 'Pre Season', 'All Star', 'All-Star']
+      - name: game_minutes
+        description: Minutos jugados. Vale 0 en partidos antiguos; se reconstruye en Silver.
+      - name: team_id_home
+        description: Id del equipo local.
+        data_tests:
+          - not_null
+      - name: team_id_away
+        description: Id del equipo visitante.
+        data_tests:
+          - not_null
+      - name: wl_home
+        description: Resultado del local (W/L). Hay incoherencias con los puntos; se recalcula en Silver.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['W', 'L']
+      - name: pts_home
+        description: Puntos del local.
+        data_tests:
+          - not_null
+      - name: pts_away
+        description: Puntos del visitante.
+        data_tests:
+          - not_null
+
+  - name: stg_kaggle__line_scores
+    description: Puntos por cuarto y prórroga de cada partido. Sirve para reconstruir los minutos.
+    columns:
+      - name: game_id
+        description: Id del partido.
+        data_tests:
+          - not_null
+
+  - name: stg_kaggle__game_info
+    description: Asistencia y duración de cada partido.
+    columns:
+      - name: game_id
+        description: Id del partido.
+        data_tests:
+          - not_null
+      - name: attendance
+        description: Espectadores. 0 o nulo en partidos sin público (COVID).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: game_duration_text
+        description: Duración como texto "h:mm". Hay valores negativos; se tratan en Silver.
+
+  - name: stg_kaggle__teams
+    description: Los 30 equipos actuales de la NBA.
+    columns:
+      - name: team_id
+        description: Id del equipo (clave de la NBA).
+        data_tests:
+          - unique
+          - not_null
+      - name: team_abbreviation
+        description: Abreviatura (LAL, BOS...).
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_kaggle__team_details
+    description: Pabellón, aforo y directiva de cada equipo. En origen faltan 5 equipos.
+    columns:
+      - name: team_id
+        description: Id del equipo.
+        data_tests:
+          - unique
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_kaggle__teams')
+                field: team_id
+      - name: arena_capacity
+        description: Aforo del pabellón. Puede venir vacío.
+
+  - name: stg_kaggle__team_history
+    description: Ciudades y nombres históricos de cada franquicia, con el periodo en que se usaron.
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "year_to >= year_from"
+    columns:
+      - name: team_id
+        description: Id del equipo.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_kaggle__teams')
+                field: team_id
+
+  - name: stg_kaggle__inactive_players
+    description: Jugadores de baja en cada partido (1 fila por jugador y partido).
+    data_tests:
+      # En origen hay 7 parejas repetidas: aviso, se deduplica en Silver.
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['game_id', 'player_id']
+          config:
+            severity: warn
+    columns:
+      - name: game_id
+        description: Id del partido.
+        data_tests:
+          - not_null
+      - name: player_id
+        description: Id del jugador.
+        data_tests:
+          - not_null
+      - name: jersey_number
+        description: Dorsal como texto ("00" no es "0").
+
+  - name: stg_kaggle__players
+    description: Ficha de cada jugador (foto a 2023).
+    columns:
+      - name: player_id
+        description: Id del jugador (clave de la NBA).
+        data_tests:
+          - unique
+          - not_null
+      - name: height_ft_in
+        description: Altura en pies-pulgadas ("6-10"). Se pasa a cm en Silver.
+      - name: weight_lbs
+        description: Peso en libras.
+      - name: draft_year_text
+        description: Año del draft o "Undrafted". Se separa en número y flag en Silver.
