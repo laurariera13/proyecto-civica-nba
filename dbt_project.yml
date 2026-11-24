@@ -47,10 +47,20 @@ models:
       intermediate:               # int_: lógica de apoyo
         +materialized: view
         +schema: intermediate
-      core:                       # dim_ y fct_
-        +schema: core
-      analytics:                  # agg_: agregados para el dashboard
-        +schema: analytics
+        +group: core
+        +access: private          # solo la usan los modelos de su group
+    core:                       # dim_ y fct_
+      +schema: core
+      +group: core
+      +access: public           # cualquiera puede usarlos
+    travel:                     # caso 1: impacto de los viajes
+      +schema: travel
+      +group: travel
+      +access: public
+    home_advantage:             # caso 2: ventaja de casa y público
+      +schema: home_advantage
+      +group: home_advantage
+      +access: public
 
 # -----------------------------------------------------------------------------
 # Seeds: datos de referencia que creamos nosotras (pabellones, sedes neutrales)
@@ -77,3 +87,5 @@ seeds:
         date_from: date
         date_to: date
         description: varchar(200)
+
+  
