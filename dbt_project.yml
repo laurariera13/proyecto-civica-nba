@@ -59,3 +59,21 @@ seeds:
   proyecto-civica-nba:
     +database: "{{ env_var('DBT_SILVER_DB') }}"
     +schema: seeds
+    arena_locations:
+      +column_types:
+        arena_name: varchar(100)
+        latitude: number(9, 6)
+        longitude: number(9, 6)
+        timezone: varchar(50)
+    team_home_arenas:
+      +column_types:
+        team_id: integer
+        arena_name: varchar(100)
+        season_from: integer
+        season_to: integer
+    neutral_venue_periods:
+      +column_types:
+        arena_name: varchar(100)
+        date_from: date
+        date_to: date
+        description: varchar(200)
