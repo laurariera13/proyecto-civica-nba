@@ -33,15 +33,15 @@ select
 
     -- caso 1: viajes
     , cast(distance_km as number(10, 1))                        as distance_km
-    , days_rest
+    , cast(days_rest as integer)                                as days_rest
     , days_rest = 0                                             as is_back_to_back
-    , timezone_shift_hours
+    , cast(timezone_shift_hours as integer)                     as timezone_shift_hours
     , case
           when timezone_shift_hours > 0 then 'east'
           when timezone_shift_hours < 0 then 'west'
           else 'none'
       end                                                       as travel_direction
-    , road_trip_game_number
+    , cast(road_trip_game_number as integer)                    as road_trip_game_number
     , is_from_home_base
 
     -- caso 2: contexto del partido (casa, público)
@@ -52,7 +52,7 @@ select
           else 'normal'
       end                                                       as fan_context
     , attendance
-    , n_inactive_players
+    , cast(n_inactive_players as integer)                       as n_inactive_players
 
     , loaded_at
 from travel
