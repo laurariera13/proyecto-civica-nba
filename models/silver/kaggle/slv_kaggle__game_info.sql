@@ -11,14 +11,12 @@
 -- slv_kaggle__game_info
 -- =============================================================================
 -- Asistencia y duración de cada partido, 1 fila por partido.
---   - Incremental por loaded_at + merge por game_id (igual que line_scores).
+--   - Incremental por loaded_at + merge por game_id.
 --   - Deduplicación: 40 game_id repetidos en origen (All-Star).
---   - Duración: viene como texto "h:mm". Se pasa a minutos. Un partido de la
---     NBA dura entre 1 y 4 horas; fuera de ese rango (negativos, "0:00",
---     "513:35"...) es un error de origen: se pone a null y se marca con
---     is_duration_invalid. Si viene vacía, queda null pero no se marca:
---     falta el dato, no está mal.
---   - Asistencia: se deja como viene (vacía en partidos antiguos).
+--   - Duración "h:mm" -> minutos. Fuera de 60-240 min es un error de origen:
+--     null + is_duration_invalid. Vacía -> null sin marcar (falta el dato).
+--   - 3FN: se quitan game_date (ya está en games) y el texto original de la
+--     duración (ya está en staging).
 -- =============================================================================
 
 with game_info as (
@@ -45,9 +43,7 @@ parsed as (
 corrected as (
     select
           game_id
-        , game_date
         , attendance
-        , game_duration_text
         , case when duration_minutes_raw between 60 and 240
                then duration_minutes_raw
           end                                                           as game_duration_minutes
