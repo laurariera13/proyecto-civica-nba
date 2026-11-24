@@ -58,8 +58,8 @@ models:
       +group: travel
       +access: public
     home_advantage:             # caso 2: ventaja de casa y público
-      +schema: home_advantage
-      +group: home_advantage
+      +schema: team_performance
+      +group: team_performance
       +access: public
 
 # -----------------------------------------------------------------------------
