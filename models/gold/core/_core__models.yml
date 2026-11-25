@@ -1,88 +1,111 @@
 models:
   - name: dim_teams
-    description: Los 30 equipos NBA con su nombre actual. Se usa dos veces, como equipo y como rival.
+    description: "QUIÉN. Los 30 equipos NBA con su nombre actual. Se usa dos veces en la tabla de hechos, como equipo y como rival."
     config:
       contract:
         enforced: true
     columns:
       - name: team_id
+        description: "Identificador del equipo (el de la NBA). Clave primaria."
         data_type: integer
         constraints: [{type: not_null}]
         data_tests: [unique, not_null]
       - name: team_abbreviation
+        description: "Abreviatura actual, p. ej. LAL."
         data_type: varchar
       - name: team_name
+        description: "Nombre completo actual = ciudad + apodo, p. ej. Los Angeles Lakers."
         data_type: varchar
       - name: team_nickname
+        description: "Apodo actual, p. ej. Lakers."
         data_type: varchar
       - name: team_city
+        description: "Ciudad actual del equipo."
         data_type: varchar
       - name: team_state
+        description: "Estado o provincia de la ciudad (Toronto = Ontario)."
         data_type: varchar
 
   - name: dim_arenas
-    description: Pabellones con ubicación y huso (seed) y aforo (Kaggle).
+    description: "DÓNDE. Pabellones con su ubicación y huso horario (seed nba_arenas) y su aforo (Kaggle). Incluye la sede neutral de la burbuja de Orlando."
     config:
       contract:
         enforced: true
     columns:
       - name: arena_id
+        description: "Clave sustituta, hash del nombre del pabellón. Si el pabellón cambia de nombre, las relaciones no se rompen."
         data_type: varchar
         constraints: [{type: not_null}]
         data_tests: [unique, not_null]
       - name: arena_name
+        description: "Nombre del pabellón."
         data_type: varchar
       - name: latitude
+        description: "Latitud en grados. Se usa para calcular la distancia de viaje."
         data_type: number(9, 6)
       - name: longitude
+        description: "Longitud en grados. Se usa para calcular la distancia de viaje."
         data_type: number(9, 6)
       - name: timezone
+        description: "Huso horario IANA, p. ej. America/Los_Angeles. Se usa para el cambio de huso."
         data_type: varchar
       - name: arena_capacity
+        description: "Aforo del pabellón según Kaggle. Vacío si Kaggle no lo tiene."
         data_type: integer
 
   - name: dim_seasons
-    description: Temporadas regulares del análisis.
+    description: "CUÁNDO (por temporada). Temporadas regulares del análisis, de 2013-14 a 2022-23."
     config:
       contract:
         enforced: true
     columns:
       - name: season_id
+        description: "Identificador de temporada de la NBA. Primer dígito = tipo (2 = regular), resto = año de inicio. Ej. 22019."
         data_type: varchar
         constraints: [{type: not_null}]
         data_tests: [unique, not_null]
       - name: season_year
+        description: "Año en que empieza la temporada. 2019 = temporada 2019-20."
         data_type: integer
       - name: season_label
+        description: "Etiqueta legible para Power BI, p. ej. 2019-20."
         data_type: varchar
 
   - name: dim_dates
-    description: Un día por fila, para filtrar por año, trimestre, mes o día de la semana.
+    description: "CUÁNDO (por calendario). Un día por fila, para filtrar por año, trimestre, mes o día de la semana."
     config:
       contract:
         enforced: true
     columns:
       - name: date_day
+        description: "El día. Clave primaria."
         data_type: date
         constraints: [{type: not_null}]
         data_tests: [unique, not_null]
       - name: year
+        description: "Año natural (no de temporada)."
         data_type: integer
       - name: quarter
+        description: "Trimestre, de 1 a 4."
         data_type: integer
       - name: month
+        description: "Mes, de 1 a 12."
         data_type: integer
       - name: month_name
+        description: "Nombre del mes."
         data_type: varchar
       - name: day_of_week
+        description: "Día de la semana, 1 = lunes ... 7 = domingo."
         data_type: integer
       - name: day_name
+        description: "Nombre del día de la semana."
         data_type: varchar
       - name: is_weekend
+        description: "Verdadero si es sábado o domingo."
         data_type: boolean
 
   - name: fct_team_games
-    description: Hechos. 1 fila por equipo y partido de temporada regular en alcance. Incremental.
+    description: "QUÉ PASÓ. Una fila por equipo y partido de temporada regular (2 filas por partido, una por equipo). Incremental por merge con clave (game_id, team_id)."
     config:
       contract:
         enforced: true
@@ -92,62 +115,118 @@ models:
             combination_of_columns: ['game_id', 'team_id']
     columns:
       - name: game_id
+        description: "Identificador del partido."
         data_type: varchar
         constraints: [{type: not_null}]
       - name: team_id
+        description: "Equipo protagonista de la fila. Enlaza con dim_teams."
         data_type: integer
         constraints: [{type: not_null}]
         data_tests:
           - relationships: {arguments: {to: ref('dim_teams'), field: team_id}}
       - name: opponent_team_id
+        description: "Equipo rival. También enlaza con dim_teams (dimensión de doble rol)."
         data_type: integer
         constraints: [{type: not_null}]
         data_tests:
           - relationships: {arguments: {to: ref('dim_teams'), field: team_id}}
       - name: season_id
+        description: "Temporada. Enlaza con dim_seasons."
         data_type: varchar
         constraints: [{type: not_null}]
         data_tests:
           - relationships: {arguments: {to: ref('dim_seasons'), field: season_id}}
       - name: arena_id
+        description: "Pabellón donde se jugó. Enlaza con dim_arenas."
         data_type: varchar
         constraints: [{type: not_null}]
         data_tests:
           - relationships: {arguments: {to: ref('dim_arenas'), field: arena_id}}
       - name: game_date
+        description: "Fecha del partido. Enlaza con dim_dates."
         data_type: date
         constraints: [{type: not_null}]
         data_tests:
           - relationships: {arguments: {to: ref('dim_dates'), field: date_day}}
-      - {name: is_home, data_type: boolean}
-      - {name: is_win, data_type: boolean}
-      - {name: pts, data_type: integer}
-      - {name: opponent_pts, data_type: integer}
-      - {name: point_diff, data_type: integer}
-      - {name: fgm, data_type: integer}
-      - {name: fga, data_type: integer}
-      - {name: fg3m, data_type: integer}
-      - {name: fg3a, data_type: integer}
-      - {name: ftm, data_type: integer}
-      - {name: fta, data_type: integer}
-      - {name: reb, data_type: integer}
-      - {name: ast, data_type: integer}
-      - {name: tov, data_type: integer}
-      - {name: distance_km, data_type: 'number(10, 1)'}
-      - {name: days_rest, data_type: integer}
-      - {name: is_back_to_back, data_type: boolean}
-      - {name: timezone_shift_hours, data_type: integer}
+      - name: is_home
+        description: "Verdadero si el equipo jugaba en casa."
+        data_type: boolean
+      - name: is_win
+        description: "Verdadero si el equipo ganó."
+        data_type: boolean
+      - name: pts
+        description: "Puntos del equipo."
+        data_type: integer
+      - name: opponent_pts
+        description: "Puntos del rival."
+        data_type: integer
+      - name: point_diff
+        description: "Diferencia de puntos (pts - opponent_pts). Positivo = ganó por tantos puntos."
+        data_type: integer
+      - name: fgm
+        description: "Tiros de campo anotados."
+        data_type: integer
+      - name: fga
+        description: "Tiros de campo intentados."
+        data_type: integer
+      - name: fg3m
+        description: "Triples anotados."
+        data_type: integer
+      - name: fg3a
+        description: "Triples intentados."
+        data_type: integer
+      - name: ftm
+        description: "Tiros libres anotados."
+        data_type: integer
+      - name: fta
+        description: "Tiros libres intentados."
+        data_type: integer
+      - name: reb
+        description: "Rebotes totales."
+        data_type: integer
+      - name: ast
+        description: "Asistencias."
+        data_type: integer
+      - name: tov
+        description: "Pérdidas de balón."
+        data_type: integer
+      - name: distance_km
+        description: "Kilómetros recorridos desde el partido anterior (fórmula de Haversine). Si sale de casa, se mide desde su pabellón."
+        data_type: number(10, 1)
+      - name: days_rest
+        description: "Días completos de descanso desde el partido anterior. 0 = back-to-back. Vacío en el primer partido de la temporada."
+        data_type: integer
+      - name: is_back_to_back
+        description: "Verdadero si jugó también el día anterior (days_rest = 0)."
+        data_type: boolean
+      - name: timezone_shift_hours
+        description: "Horas de cambio de huso respecto al partido anterior. Positivo = viaja al este, negativo = al oeste."
+        data_type: integer
       - name: travel_direction
+        description: "Dirección del cambio de huso. east / west / none."
         data_type: varchar
         data_tests:
           - accepted_values: {arguments: {values: ['east', 'west', 'none']}}
-      - {name: road_trip_game_number, data_type: integer}
-      - {name: is_from_home_base, data_type: boolean}
-      - {name: is_neutral_venue, data_type: boolean}
+      - name: road_trip_game_number
+        description: "Número de partido dentro de una gira fuera de casa seguida (1 = primero de la gira). En casa vale 0."
+        data_type: integer
+      - name: is_from_home_base
+        description: "Verdadero si sale desde su ciudad. Es el primer partido de la temporada o hay más de 5 días desde el anterior (supuesto, variable return_home_min_days)."
+        data_type: boolean
+      - name: is_neutral_venue
+        description: "Verdadero si se jugó en sede neutral (burbuja de Orlando 2020)."
+        data_type: boolean
       - name: fan_context
+        description: "Situación del público. normal / restricted (temporada 2020-21, COVID) / bubble (burbuja sin público)."
         data_type: varchar
         data_tests:
           - accepted_values: {arguments: {values: ['normal', 'restricted', 'bubble']}}
-      - {name: attendance, data_type: integer}
-      - {name: n_inactive_players, data_type: integer}
-      - {name: loaded_at, data_type: timestamp_ltz}
+      - name: attendance
+        description: "Espectadores en el pabellón según Kaggle."
+        data_type: integer
+      - name: n_inactive_players
+        description: "Jugadores inactivos del equipo en ese partido."
+        data_type: integer
+      - name: loaded_at
+        description: "Cuándo llegó la fila a Bronze. Lo usa el incremental para procesar solo filas nuevas."
+        data_type: timestamp_ltz

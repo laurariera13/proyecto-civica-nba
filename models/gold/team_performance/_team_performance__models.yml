@@ -1,21 +1,58 @@
 models:
   - name: agg_team_performance
-    description: Caso 2. Informe de rendimiento de cada equipo por temporada (balance, casa/fuera, ataque, defensa y tiro).
+    description: "CASO 2. Informe de rendimiento de cada equipo por temporada. Balance, casa/fuera, ataque, defensa y tiro. Una fila por equipo y temporada."
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: ['team_id', 'season_id']
     columns:
+      - name: team_id
+        description: "Equipo. Enlaza con dim_teams."
+      - name: team_name
+        description: "Nombre actual del equipo, p. ej. Golden State Warriors."
+      - name: season_id
+        description: "Temporada. Enlaza con dim_seasons."
+      - name: season_label
+        description: "Temporada legible, p. ej. 2015-16."
+      - name: n_games
+        description: "Partidos jugados en la temporada regular (normalmente 82)."
+      - name: n_wins
+        description: "Victorias."
+      - name: n_losses
+        description: "Derrotas."
       - name: win_pct
+        description: "% de victorias, de 0 a 100."
         data_tests:
           - dbt_utils.accepted_range:
               arguments:
                 min_value: 0
                 max_value: 100
       - name: home_win_pct
-        description: '% de victorias en casa. Bajó en 2020-21, la temporada casi sin público.'
+        description: "% de victorias en casa. Bajó en 2020-21, la temporada casi sin público."
+      - name: away_win_pct
+        description: "% de victorias fuera de casa."
       - name: back_to_back_win_pct
-        description: '% de victorias en back-to-back (enlaza con el caso 1).'
+        description: "% de victorias en back-to-back (enlaza con el caso 1). Vacío si no jugó ninguno."
+      - name: avg_home_attendance
+        description: "Espectadores medios en sus partidos en casa."
+      - name: avg_pts
+        description: "Puntos anotados por partido (ataque)."
+      - name: avg_opponent_pts
+        description: "Puntos recibidos por partido (defensa)."
+      - name: avg_point_diff
+        description: "Diferencia de puntos media por partido. El mejor resumen de lo bueno que es un equipo."
+      - name: fg_pct
+        description: "% de acierto en tiros de campo (anotados / intentados de toda la temporada)."
+      - name: fg3_pct
+        description: "% de acierto en triples."
+      - name: ft_pct
+        description: "% de acierto en tiros libres."
+      - name: avg_reb
+        description: "Rebotes por partido."
+      - name: avg_ast
+        description: "Asistencias por partido."
+      - name: avg_tov
+        description: "Pérdidas de balón por partido."
 
 exposures:
   - name: dashboard_team_performance
