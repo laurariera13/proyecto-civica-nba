@@ -1,26 +1,39 @@
 models:
   - name: agg_travel_impact
-    description: Caso 1. % de victorias y diferencia de puntos por tramo de cada factor de viaje.
+    description: "CASO 1. ¿Los viajes hacen perder? % de victorias y diferencia de puntos por tramo de cada factor de viaje, separando casa y fuera para no mezclar la ventaja de jugar en casa."
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: ['factor', 'location', 'bucket']
     columns:
       - name: factor
+        description: "Factor de viaje que se analiza. Descanso, Distancia, Cambio de huso o Gira fuera de casa."
         data_tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ['Descanso', 'Distancia', 'Cambio de huso', 'Gira fuera de casa']
+      - name: location
+        description: "Casa o Fuera. Se separa porque jugar en casa ya da ventaja y si no se mezclaría con el efecto del viaje."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Casa', 'Fuera']
       - name: bucket
-        description: Tramo, numerado para que Power BI lo ordene bien.
+        description: "Tramo dentro del factor (p. ej. 1. Back-to-back, 2. 1 día). Va numerado para que Power BI lo ordene bien."
         data_tests: [not_null]
+      - name: n_games
+        description: "Partidos que caen en ese tramo. Sirve para saber si el resultado es fiable (pocos partidos = poco fiable)."
       - name: win_pct
+        description: "% de victorias en ese tramo, de 0 a 100."
         data_tests:
           - dbt_utils.accepted_range:
               arguments:
                 min_value: 0
                 max_value: 100
+      - name: avg_point_diff
+        description: "Diferencia de puntos media. Positivo = gana de media por esos puntos, negativo = pierde."
 
 exposures:
   - name: dashboard_travel
