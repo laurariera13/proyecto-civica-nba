@@ -55,14 +55,20 @@ models:
         +schema: core
         +group: core
         +access: public           # cualquiera puede usarlos
+        +grants:
+          select: "{{ ['REPORTING_ROLE'] if env_var('DBT_GOLD_DB') == 'PRO_GOLD_DB' else [] }}"
       travel:                     # caso 1: impacto de los viajes
         +schema: travel
         +group: travel
         +access: public
+        +grants:
+          select: "{{ ['REPORTING_ROLE'] if env_var('DBT_GOLD_DB') == 'PRO_GOLD_DB' else [] }}"
       team_performance:             # caso 2: ventaja de casa y público
         +schema: team_performance
         +group: team_performance
         +access: public
+        +grants:
+          select: "{{ ['REPORTING_ROLE'] if env_var('DBT_GOLD_DB') == 'PRO_GOLD_DB' else [] }}"
 
 # -----------------------------------------------------------------------------
 # Seeds: datos de referencia que creamos nosotras (pabellones, sedes neutrales)
